@@ -4,15 +4,11 @@ import { Bee } from './icons/Bee';
 import { motion, AnimatePresence } from 'motion/react';
 import { PrintableAssets } from './PrintableAssets';
 import { 
-  School, 
-  ClassRoom, 
-  Student, 
-  Word, 
-  Competition, 
-  CompetitionPhase, 
-  Group, 
-  Difficulty 
-} from '../types';
+  buildInitialCompetition, 
+  handleStudentElimination, 
+  buildNextPhase, 
+  getPhaseName 
+} from '../services/tournamentEngine';
 
 interface Props {
   schools: School[];
@@ -62,7 +58,8 @@ export default function TournamentRunner({
 
   const currentWord = useMemo(() => {
     const difficultyLevel = 
-      activeComp?.currentPhase === CompetitionPhase.PHASE_1 ? Difficulty.EASY :
+      activeComp?.currentPhase === CompetitionPhase.PRELIMINARY ? Difficulty.EASY :
+      activeComp?.currentPhase === CompetitionPhase.QUARTERFINAL ? Difficulty.EASY :
       activeComp?.currentPhase === CompetitionPhase.FINAL ? Difficulty.HARD :
       Difficulty.MEDIUM;
     
@@ -92,43 +89,13 @@ export default function TournamentRunner({
     if (selectedClassIds.length === 0) return;
     const classStudents = students.filter(s => selectedClassIds.includes(s.classId));
     
-    // We need at least 2 students for a tournament
     if (classStudents.length < 2) {
       alert("Para este formato, você precisa de pelo menos 2 alunos cadastrados no total das turmas selecionadas.");
       return;
     }
 
-    // Fisher-Yates Shuffle
-    const shuffled = [...classStudents];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    
-    // Dynamic grouping: max 4 per group
-    const size = 4;
-    const numGroups = Math.ceil(shuffled.length / size);
-    
-    const groups: Group[] = Array.from({ length: numGroups }, (_, i) => ({
-        id: crypto.randomUUID(),
-        name: `Group ${String.fromCharCode(65 + i)}`,
-        studentIds: [],
-        classifiedIds: []
-    }));
-
-    shuffled.forEach((student, index) => {
-        groups[index % numGroups].studentIds.push(student.id);
-    });
-
-    const newComp: Competition = {
-        id: crypto.randomUUID(),
-        classIds: selectedClassIds,
-        schoolId: classes.find(c => c.id === selectedClassIds[0])?.schoolId || schools[0]?.id || '',
-        currentPhase: CompetitionPhase.PHASE_1 as any, // using string logic next
-        groups: groups,
-        eliminatedStudentIds: [],
-        history: []
-    };
+    const schoolId = classes.find(c => c.id === selectedClassIds[0])?.schoolId || schools[0]?.id || '';
+    const newComp = buildInitialCompetition(selectedClassIds, schoolId, classStudents);
 
     setCompetitions([...competitions, newComp]);
     setActiveCompId(newComp.id);
@@ -153,7 +120,7 @@ export default function TournamentRunner({
   };
 
   const getPhaseColors = (phase: any) => {
-    if (phase === CompetitionPhase.PHASE_1) return { text: 'text-green-500', bg: 'bg-green-500', shadow: 'shadow-green-500', pulse: 'bg-green-400 shadow-green-400' };
+    if (phase === CompetitionPhase.PRELIMINARY || phase === CompetitionPhase.QUARTERFINAL) return { text: 'text-green-500', bg: 'bg-green-500', shadow: 'shadow-green-500', pulse: 'bg-green-400 shadow-green-400' };
     if (phase === CompetitionPhase.FINAL) return { text: 'text-red-500', bg: 'bg-red-500', shadow: 'shadow-red-500', pulse: 'bg-red-400 shadow-red-400' };
     if (phase === CompetitionPhase.COMPLETED) return { text: 'text-amber-500', bg: 'bg-amber-500', shadow: 'shadow-amber-500', pulse: 'bg-amber-400 shadow-amber-400' };
     return { text: 'text-orange-500', bg: 'bg-orange-500', shadow: 'shadow-orange-500', pulse: 'bg-orange-400 shadow-orange-400' };
@@ -183,44 +150,18 @@ export default function TournamentRunner({
   };
 
   const executeElimination = (student: Student) => {
-    if (!activeComp || !activeGroup) return;
+    if (!activeComp || !activeGroup || !activeGroupId) return;
 
     setEliminatedStudentName(student.name);
     setTimeout(() => setEliminatedStudentName(null), 2500);
 
-    const historyItem = {
+    const { updatedComp, isGroupFinished, nextGroupId } = handleStudentElimination(
+        activeComp,
+        activeGroupId,
+        student,
         round,
-        studentId: student.id,
-        wordId: currentWord?.id || 'skipped',
-        isCorrect: false,
-        phase: activeComp.currentPhase
-    };
-
-    let updatedEliminated = [...activeComp.eliminatedStudentIds];
-    updatedEliminated.push(student.id);
-
-    // Check if group is finished
-    const remainingInGroup = activeGroup.studentIds.filter(id => !updatedEliminated.includes(id));
-    
-    let updatedGroups = activeComp.groups.map(g => {
-        if (g.id === activeGroupId) {
-            // Target is 2 students per group, except for the final which is 1
-            const target = activeComp.groups.length === 1 ? 1 : 2;
-            if (remainingInGroup.length <= target) {
-                return { ...g, classifiedIds: remainingInGroup };
-            }
-        }
-        return g;
-    });
-
-    const isGroupFinished = updatedGroups.find(g => g.id === activeGroupId)?.classifiedIds.length !== undefined && updatedGroups.find(g => g.id === activeGroupId)!.classifiedIds.length > 0;
-
-    const updatedComp = {
-        ...activeComp,
-        history: [...activeComp.history, historyItem],
-        eliminatedStudentIds: updatedEliminated,
-        groups: updatedGroups
-    };
+        currentWord?.id
+    );
 
     const newComps = competitions.map(c => c.id === activeCompId ? updatedComp : c);
     setCompetitions(newComps);
@@ -258,60 +199,7 @@ export default function TournamentRunner({
 
   const advancePhase = () => {
     if (!activeComp) return;
-
-    let nextPhase: any;
-    let nextGroups: Group[] = [];
-    const qualified = activeComp.groups.flatMap(g => g.classifiedIds);
-
-    // Fisher-Yates Shuffle the qualified students so the new groups are arranged randomly!
-    const shuffledQualified = [...qualified];
-    for (let i = shuffledQualified.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledQualified[i], shuffledQualified[j]] = [shuffledQualified[j], shuffledQualified[i]];
-    }
-
-    if (activeComp.currentPhase === CompetitionPhase.FINAL) {
-        nextPhase = CompetitionPhase.COMPLETED;
-        nextGroups = activeComp.groups;
-    } else {
-        const size = 4;
-        const numGroups = Math.ceil(shuffledQualified.length / size);
-
-        if (numGroups > 1) {
-            nextPhase = numGroups === 2 ? CompetitionPhase.SEMIFINAL : `Phase (Top ${shuffledQualified.length})` as any;
-            
-            const newGroups: Group[] = Array.from({ length: numGroups }, (_, i) => ({
-                id: crypto.randomUUID(),
-                name: numGroups === 2 ? `Semifinal ${i + 1}` : `Group ${String.fromCharCode(65 + i)}`,
-                studentIds: [],
-                classifiedIds: []
-            }));
-
-            shuffledQualified.forEach((studentId, index) => {
-                newGroups[index % numGroups].studentIds.push(studentId);
-            });
-            nextGroups = newGroups;
-        } else {
-            nextPhase = CompetitionPhase.FINAL;
-            nextGroups.push({
-                id: crypto.randomUUID(),
-                name: 'Grand Final',
-                studentIds: shuffledQualified,
-                classifiedIds: []
-            });
-        }
-    }
-
-    const updatedComp: Competition = {
-        ...activeComp,
-        currentPhase: nextPhase,
-        groups: nextGroups,
-        winners: nextPhase === CompetitionPhase.COMPLETED ? {
-            first: qualified[0],
-            second: activeComp.eliminatedStudentIds[activeComp.eliminatedStudentIds.length - 1]
-        } : undefined
-    };
-
+    const updatedComp = buildNextPhase(activeComp);
     setCompetitions(competitions.map(c => c.id === activeCompId ? updatedComp : c));
   };
 
@@ -406,7 +294,7 @@ export default function TournamentRunner({
                   <div key={comp.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-[24px] hover:border-amber-200 hover:shadow-lg hover:shadow-amber-50 transition-all">
                     <div className="mb-4 sm:mb-0">
                       <p className="font-black text-slate-900 uppercase tracking-tight text-lg">{clsName}</p>
-                      <p className={`text-[10px] font-bold tracking-widest uppercase mt-1 ${getPhaseColors(comp.currentPhase).text}`}>{comp.currentPhase}</p>
+                      <p className={`text-[10px] font-bold tracking-widest uppercase mt-1 ${getPhaseColors(comp.currentPhase).text}`}>{getPhaseName(comp.currentPhase)}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       {isCompleted ? (
@@ -529,7 +417,7 @@ export default function TournamentRunner({
            <div>
              <div className="flex items-center gap-3 mb-1">
                <div className={`w-2 h-2 rounded-full animate-pulse shadow-sm ${getPhaseColors(activeComp.currentPhase).pulse}`} />
-               <h2 className={`text-2xl font-black uppercase tracking-tighter ${getPhaseColors(activeComp.currentPhase).text}`}>{activeComp.currentPhase}</h2>
+               <h2 className={`text-2xl font-black uppercase tracking-tighter ${getPhaseColors(activeComp.currentPhase).text}`}>{getPhaseName(activeComp.currentPhase)}</h2>
              </div>
              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Arena Live Stream • Match Controller</p>
            </div>

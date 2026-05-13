@@ -37,11 +37,11 @@ export interface Group {
 }
 
 export enum CompetitionPhase {
-  PHASE_1 = '1st Phase (6 Groups of 4)',
-  PHASE_2 = '2nd Phase (3 Groups of 4)',
-  SEMIFINAL = 'Semifinal (2 Groups of 3)',
-  FINAL = 'Final (2 Finalists)',
-  COMPLETED = 'Completed'
+  PRELIMINARY = 'PRELIMINARY',
+  QUARTERFINAL = 'QUARTERFINAL',
+  SEMIFINAL = 'SEMIFINAL',
+  FINAL = 'FINAL',
+  COMPLETED = 'COMPLETED'
 }
 
 export interface Competition {

@@ -51,7 +51,11 @@ export default function Management({ schools, setSchools, classes, setClasses, s
 
   const removeSchool = (id: string) => {
     setSchools(schools.filter(s => s.id !== id));
+    const classIdsToRemove = classes.filter(c => c.schoolId === id).map(c => c.id);
     setClasses(classes.filter(c => c.schoolId !== id));
+    if (classIdsToRemove.length > 0) {
+      setStudents(students.filter(s => !classIdsToRemove.includes(s.classId)));
+    }
   };
 
   const addClass = () => {

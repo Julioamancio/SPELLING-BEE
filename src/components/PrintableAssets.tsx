@@ -1,5 +1,5 @@
 import React from 'react';
-import { Competition, Student, Word, ClassRoom, CompetitionPhase } from '../types';
+import { Competition, Student, Word, ClassRoom, CompetitionPhase, Difficulty } from '../types';
 
 interface Props {
   competition: Competition;
@@ -16,8 +16,8 @@ export function PrintableAssets({ competition, students, words, classes }: Props
   const today = new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date());
 
   // Collect the words
-  const easyWords = words.filter(w => w.difficulty === 'easy');
-  const mediumWords = words.filter(w => w.difficulty === 'medium');
+  const easyWords = words.filter(w => w.difficulty === Difficulty.EASY);
+  const mediumWords = words.filter(w => w.difficulty === Difficulty.MEDIUM);
 
   // Description text
   const getDescription = () => {

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Search, Filter, BookOpen, FileText, Loader2, ListPlus, Edit3, CheckSquare, Square, X } from 'lucide-react';
+import { Plus, Trash2, Search, Filter, BookOpen, FileText, Loader2, ListPlus, Edit3, CheckSquare, Square, X, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Word, Difficulty } from '../types';
 import { processBulkWords } from '../services/geminiService';
+import { useSpellCheck } from '../hooks/useSpellCheck';
 
 interface Props {
   words: Word[];
@@ -28,6 +29,10 @@ export default function WordBank({ words, setWords }: Props) {
 
   const [addError, setAddError] = useState('');
   const [editError, setEditError] = useState('');
+
+  // Spell Checkers
+  const addWordSpellCheck = useSpellCheck(newWord.text || '');
+  const editWordSpellCheck = useSpellCheck(editingWord?.text || '');
 
   const filteredWords = words.filter(w => {
     const matchesSearch = w.text.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -324,10 +329,43 @@ export default function WordBank({ words, setWords }: Props) {
                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest transition-colors group-focus-within:text-amber-500">Word (English)</label>
                    <input 
                     type="text" 
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:bg-white focus:outline-none font-black text-xl uppercase tracking-tighter transition-all"
+                    className={`w-full px-6 py-4 bg-slate-50 border ${addWordSpellCheck.isValid === false ? 'border-red-400 focus:ring-red-100' : 'border-slate-200 focus:ring-amber-100'} rounded-2xl focus:ring-4 focus:bg-white focus:outline-none font-black text-xl uppercase tracking-tighter transition-all`}
                     value={newWord.text || ''}
                     onChange={(e) => setNewWord({...newWord, text: e.target.value})}
                    />
+                   
+                   {/* Real-time spell check feedback */}
+                   <AnimatePresence>
+                     {addWordSpellCheck.isChecking && (
+                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="flex items-center gap-2 mt-2 ml-2 overflow-hidden">
+                         <Loader2 className="w-3 h-3 text-slate-400 animate-spin" />
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checking spelling...</span>
+                       </motion.div>
+                     )}
+                     {addWordSpellCheck.isValid === false && !addWordSpellCheck.isChecking && (
+                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-3 bg-red-50 p-4 rounded-xl border border-red-100 overflow-hidden">
+                         <div className="flex items-center gap-2">
+                           <AlertTriangle className="w-4 h-4 text-red-500" />
+                           <span className="text-xs font-black text-red-600 uppercase tracking-tight">Possible spelling mistake</span>
+                         </div>
+                         {addWordSpellCheck.suggestions.length > 0 && (
+                           <div className="mt-2 flex flex-wrap gap-2">
+                             <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center">Suggestions:</span>
+                             {addWordSpellCheck.suggestions.map(sug => (
+                               <button 
+                                 key={sug}
+                                 onClick={() => setNewWord({...newWord, text: sug})}
+                                 className="px-2 py-1 bg-white border border-red-200 rounded text-[10px] font-black text-red-700 uppercase hover:bg-red-100 transition-colors"
+                               >
+                                 {sug}
+                               </button>
+                             ))}
+                           </div>
+                         )}
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
+
                  </div>
                  <div className="grid grid-cols-2 gap-6">
                    <div className="group">
@@ -411,10 +449,43 @@ export default function WordBank({ words, setWords }: Props) {
                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Word (English)</label>
                    <input 
                     type="text" 
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:bg-white focus:outline-none font-black text-xl uppercase tracking-tighter transition-all"
+                    className={`w-full px-6 py-4 bg-slate-50 border ${editWordSpellCheck.isValid === false ? 'border-red-400 focus:ring-red-100' : 'border-slate-200 focus:ring-amber-100'} rounded-2xl focus:ring-4 focus:bg-white focus:outline-none font-black text-xl uppercase tracking-tighter transition-all`}
                     value={editingWord.text}
                     onChange={(e) => setEditingWord({...editingWord, text: e.target.value})}
                    />
+                   
+                   {/* Real-time spell check feedback */}
+                   <AnimatePresence>
+                     {editWordSpellCheck.isChecking && (
+                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="flex items-center gap-2 mt-2 ml-2 overflow-hidden">
+                         <Loader2 className="w-3 h-3 text-slate-400 animate-spin" />
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checking spelling...</span>
+                       </motion.div>
+                     )}
+                     {editWordSpellCheck.isValid === false && !editWordSpellCheck.isChecking && (
+                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-3 bg-red-50 p-4 rounded-xl border border-red-100 overflow-hidden">
+                         <div className="flex items-center gap-2">
+                           <AlertTriangle className="w-4 h-4 text-red-500" />
+                           <span className="text-xs font-black text-red-600 uppercase tracking-tight">Possible spelling mistake</span>
+                         </div>
+                         {editWordSpellCheck.suggestions.length > 0 && (
+                           <div className="mt-2 flex flex-wrap gap-2">
+                             <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center">Suggestions:</span>
+                             {editWordSpellCheck.suggestions.map(sug => (
+                               <button 
+                                 key={sug}
+                                 onClick={() => setEditingWord({...editingWord, text: sug})}
+                                 className="px-2 py-1 bg-white border border-red-200 rounded text-[10px] font-black text-red-700 uppercase hover:bg-red-100 transition-colors"
+                               >
+                                 {sug}
+                               </button>
+                             ))}
+                           </div>
+                         )}
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
+
                  </div>
                  <div className="grid grid-cols-2 gap-6">
                    <div className="group">

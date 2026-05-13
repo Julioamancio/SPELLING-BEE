@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Trophy, 
   Users, 
@@ -9,7 +9,8 @@ import {
   Printer,
   Settings,
   LogOut,
-  FileText
+  FileText,
+  BarChart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bee } from './components/icons/Bee';
@@ -23,8 +24,11 @@ import {
 } from './types';
 import { DEFAULT_WORDS } from './data/wordBank';
 
-// --- SQL Backend ---
-import { useSqlCollection } from './hooks/useSql';
+// --- Firebase Backend ---
+import { auth } from './firebase';
+import { signOut } from 'firebase/auth';
+import { useAuth } from './hooks/useAuth';
+import { useFirestoreCollection } from './hooks/useFirestore';
 
 // --- Views ---
 import Management from './components/Management';
@@ -33,29 +37,24 @@ import TournamentRunner from './components/TournamentRunner';
 import Materials from './components/Materials';
 import Login from './components/Login';
 
+import Reports from './components/Reports';
+
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'classes' | 'words' | 'tournament' | 'materials'>('dashboard');
+  const { user, loading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'classes' | 'words' | 'tournament' | 'materials' | 'reports'>('dashboard');
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  // --- Persistent State from SQLite ---
-  const [schools, setSchools, schoolsLoading] = useSqlCollection<School>('schools', [{ id: 'csj-1', name: 'CSJ' }]);
-  const [classes, setClasses, classesLoading] = useSqlCollection<ClassRoom>('classes', [
+  // --- Persistent State from Firestore ---
+  const [schools, setSchools, schoolsLoading] = useFirestoreCollection<School>('schools', [{ id: 'csj-1', name: 'CSJ' }]);
+  const [classes, setClasses, classesLoading] = useFirestoreCollection<ClassRoom>('classes', [
     { id: 'c1', schoolId: 'csj-1', name: '9° ANO A' },
     { id: 'c2', schoolId: 'csj-1', name: '9° ANO B' },
     { id: 'c3', schoolId: 'csj-1', name: '1° SÉRIE' },
     { id: 'c4', schoolId: 'csj-1', name: '2° SÉRIE' },
   ]);
-  const [students, setStudents, studentsLoading] = useSqlCollection<Student>('students', []);
-  const [words, setWords, wordsLoading] = useSqlCollection<Word>('words', DEFAULT_WORDS);
-  const [competitions, setCompetitions, competitionsLoading] = useSqlCollection<Competition>('competitions', []);
+  const [students, setStudents, studentsLoading] = useFirestoreCollection<Student>('students', []);
+  const [words, setWords, wordsLoading] = useFirestoreCollection<Word>('words', DEFAULT_WORDS);
+  const [competitions, setCompetitions, competitionsLoading] = useFirestoreCollection<Competition>('competitions', []);
 
   // --- Helpers ---
   const activeCompetition = useMemo(() => 
@@ -77,19 +76,27 @@ export default function App() {
     { id: 'words', label: 'Word Bank', icon: BookOpen },
     { id: 'tournament', label: 'Tournament', icon: Trophy },
     { id: 'materials', label: 'Class Material', icon: FileText },
+    { id: 'reports', label: 'Reports', icon: BarChart },
   ];
 
-  if (!isAuthenticated) {
-    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  if (authLoading) {
+    return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-sm">Carregando Aplicação...</div>;
+  }
+
+  if (!user) {
+    return <Login />;
   }
 
   if (schoolsLoading || classesLoading || studentsLoading || wordsLoading || competitionsLoading) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-sm">Carregando Banco de Dados...</div>;
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -325,6 +332,16 @@ export default function App() {
 
             {activeTab === 'materials' && (
               <Materials 
+                words={words}
+              />
+            )}
+
+            {activeTab === 'reports' && (
+              <Reports
+                competitions={competitions}
+                students={students}
+                classes={classes}
+                schools={schools}
                 words={words}
               />
             )}
