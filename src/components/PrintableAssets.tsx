@@ -16,8 +16,8 @@ export function PrintableAssets({ competition, students, words, classes }: Props
   const today = new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date());
 
   // Collect the words
-  const easyWords = words.filter(w => w.difficulty === Difficulty.EASY);
-  const mediumWords = words.filter(w => w.difficulty === Difficulty.MEDIUM);
+  const easyWords = words.filter(w => w.difficulty === Difficulty.A1);
+  const mediumWords = words.filter(w => w.difficulty === Difficulty.B1);
 
   // Description text
   const getDescription = () => {
@@ -106,9 +106,10 @@ export function PrintableAssets({ competition, students, words, classes }: Props
           <table className="w-full text-left border-collapse border border-black text-sm">
             <thead>
               <tr className="bg-gray-100">
-                <th className="border border-black p-2 font-black w-1/3">Word</th>
-                <th className="border border-black p-2 font-black w-1/3">Pronunciation</th>
-                <th className="border border-black p-2 font-black">Meaning</th>
+                <th className="border border-black p-2 font-black w-1/4">Word</th>
+                <th className="border border-black p-2 font-black w-1/4">Pronunciation</th>
+                <th className="border border-black p-2 font-black w-1/4">Meaning</th>
+                <th className="border border-black p-2 font-black w-1/4">Example</th>
               </tr>
             </thead>
             <tbody>
@@ -117,11 +118,12 @@ export function PrintableAssets({ competition, students, words, classes }: Props
                   <td className="border border-black p-2 font-bold font-mono">{w.text.toUpperCase()}</td>
                   <td className="border border-black p-2">/{w.pronunciation}/</td>
                   <td className="border border-black p-2">{w.meaning}</td>
+                  <td className="border border-black p-2 italic text-xs">{w.example || ''}</td>
                 </tr>
               ))}
               {easyWords.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="border border-black p-4 text-center italic text-gray-500">No easy words found.</td>
+                  <td colSpan={4} className="border border-black p-4 text-center italic text-gray-500">No easy words found.</td>
                 </tr>
               )}
             </tbody>
@@ -133,9 +135,10 @@ export function PrintableAssets({ competition, students, words, classes }: Props
           <table className="w-full text-left border-collapse border border-black text-sm">
             <thead>
               <tr className="bg-gray-100">
-                <th className="border border-black p-2 font-black w-1/3">Word</th>
-                <th className="border border-black p-2 font-black w-1/3">Pronunciation</th>
-                <th className="border border-black p-2 font-black">Meaning</th>
+                <th className="border border-black p-2 font-black w-1/4">Word</th>
+                <th className="border border-black p-2 font-black w-1/4">Pronunciation</th>
+                <th className="border border-black p-2 font-black w-1/4">Meaning</th>
+                <th className="border border-black p-2 font-black w-1/4">Example</th>
               </tr>
             </thead>
             <tbody>
@@ -144,11 +147,12 @@ export function PrintableAssets({ competition, students, words, classes }: Props
                   <td className="border border-black p-2 font-bold font-mono">{w.text.toUpperCase()}</td>
                   <td className="border border-black p-2">/{w.pronunciation}/</td>
                   <td className="border border-black p-2">{w.meaning}</td>
+                  <td className="border border-black p-2 italic text-xs">{w.example || ''}</td>
                 </tr>
               ))}
               {mediumWords.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="border border-black p-4 text-center italic text-gray-500">No medium words found.</td>
+                  <td colSpan={4} className="border border-black p-4 text-center italic text-gray-500">No medium words found.</td>
                 </tr>
               )}
             </tbody>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Search, Filter, BookOpen, FileText, Loader2, ListPlus, Edit3, CheckSquare, Square, X, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Search, Filter, BookOpen, FileText, Loader2, ListPlus, Edit3, CheckSquare, Square, X, AlertTriangle, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Word, Difficulty } from '../types';
 import { processBulkWords } from '../services/geminiService';
@@ -13,7 +13,7 @@ interface Props {
 export default function WordBank({ words, setWords }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState<Difficulty | 'All'>('All');
-  const [sortOption, setSortOption] = useState<'A-Z' | 'Easy-Hard' | 'Hard-Easy'>('A-Z');
+  const [sortOption, setSortOption] = useState<'A-Z' | 'Z-A' | 'Easy-Hard' | 'Hard-Easy'>('A-Z');
   const [isAdding, setIsAdding] = useState(false);
   const [isBulkAdding, setIsBulkAdding] = useState(false);
   const [bulkText, setBulkText] = useState('');
@@ -24,7 +24,7 @@ export default function WordBank({ words, setWords }: Props) {
   const [editingWord, setEditingWord] = useState<Word | null>(null);
 
   const [newWord, setNewWord] = useState<Partial<Word>>({
-    difficulty: Difficulty.EASY
+    difficulty: Difficulty.A1
   });
 
   const [addError, setAddError] = useState('');
@@ -42,9 +42,12 @@ export default function WordBank({ words, setWords }: Props) {
   });
 
   const getDifficultyWeight = (diff: Difficulty) => {
-    if (diff === Difficulty.EASY) return 1;
-    if (diff === Difficulty.MEDIUM) return 2;
-    if (diff === Difficulty.HARD) return 3;
+    if (diff === Difficulty.A1) return 1;
+    if (diff === Difficulty.A2) return 2;
+    if (diff === Difficulty.B1) return 3;
+    if (diff === Difficulty.B2) return 4;
+    if (diff === Difficulty.C1) return 5;
+    if (diff === Difficulty.C2) return 6;
     return 0;
   };
 
@@ -54,6 +57,9 @@ export default function WordBank({ words, setWords }: Props) {
     }
     if (sortOption === 'Hard-Easy') {
       return getDifficultyWeight(b.difficulty) - getDifficultyWeight(a.difficulty) || a.text.localeCompare(b.text);
+    }
+    if (sortOption === 'Z-A') {
+      return b.text.localeCompare(a.text);
     }
     return a.text.localeCompare(b.text); // A-Z
   });
@@ -69,11 +75,12 @@ export default function WordBank({ words, setWords }: Props) {
       text: newWord.text.trim(),
       meaning: newWord.meaning.trim(),
       pronunciation: newWord.pronunciation?.trim() || '',
-      difficulty: (newWord.difficulty as Difficulty) || Difficulty.EASY
+      example: newWord.example?.trim() || '',
+      difficulty: (newWord.difficulty as Difficulty) || Difficulty.A1
     };
     setWords([...words, word]);
     setIsAdding(false);
-    setNewWord({ difficulty: Difficulty.EASY });
+    setNewWord({ difficulty: Difficulty.A1 });
   };
 
   const handleUpdate = () => {
@@ -87,7 +94,8 @@ export default function WordBank({ words, setWords }: Props) {
       ...editingWord,
       text: editingWord.text.trim(),
       meaning: editingWord.meaning.trim(),
-      pronunciation: editingWord.pronunciation?.trim() || ''
+      pronunciation: editingWord.pronunciation?.trim() || '',
+      example: editingWord.example?.trim() || '',
     };
     setWords(words.map(w => w.id === updated.id ? updated : w));
     setEditingWord(null);
@@ -109,7 +117,8 @@ export default function WordBank({ words, setWords }: Props) {
         text: w.text || '',
         meaning: w.meaning || '',
         pronunciation: w.pronunciation || '',
-        difficulty: (w.difficulty as Difficulty) || Difficulty.EASY
+        example: w.example || '',
+        difficulty: (w.difficulty as Difficulty) || Difficulty.A1
       }));
 
       setWords(prev => [...prev, ...completeWords]);
@@ -161,25 +170,39 @@ export default function WordBank({ words, setWords }: Props) {
           />
         </div>
         <div className="flex items-center gap-4 flex-wrap justify-end">
-           <select 
-             className="px-6 py-5 bg-white border border-slate-200 rounded-3xl font-black uppercase text-[10px] tracking-widest text-slate-500 focus:outline-none shadow-sm cursor-pointer hover:border-slate-300"
-             value={filterDifficulty}
-             onChange={(e) => setFilterDifficulty(e.target.value as any)}
-           >
-             <option value="All">All Difficulty Levels</option>
-             <option value={Difficulty.EASY}>Easy Words</option>
-             <option value={Difficulty.MEDIUM}>Medium Words</option>
-             <option value={Difficulty.HARD}>Hard Words</option>
-           </select>
-           <select 
-             className="px-6 py-5 bg-white border border-slate-200 rounded-3xl font-black uppercase text-[10px] tracking-widest text-slate-500 focus:outline-none shadow-sm cursor-pointer hover:border-slate-300"
-             value={sortOption}
-             onChange={(e) => setSortOption(e.target.value as any)}
-           >
-             <option value="A-Z">Sort: A-Z</option>
-             <option value="Easy-Hard">Sort: Easy to Hard</option>
-             <option value="Hard-Easy">Sort: Hard to Easy</option>
-           </select>
+           <div className="relative group">
+             <div className="absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none">
+               <Filter className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+             </div>
+             <select 
+               className="pl-14 pr-8 py-5 bg-white border border-slate-200 rounded-3xl font-black uppercase text-[10px] tracking-widest text-slate-500 focus:outline-none shadow-sm cursor-pointer hover:border-slate-300 appearance-none"
+               value={filterDifficulty}
+               onChange={(e) => setFilterDifficulty(e.target.value as any)}
+             >
+               <option value="All">All Difficulty Levels</option>
+               <option value={Difficulty.A1}>A1 - Beginner</option>
+               <option value={Difficulty.A2}>A2 - Elementary</option>
+               <option value={Difficulty.B1}>B1 - Intermediate</option>
+               <option value={Difficulty.B2}>B2 - Upper Intermediate</option>
+               <option value={Difficulty.C1}>C1 - Advanced</option>
+               <option value={Difficulty.C2}>C2 - Proficient</option>
+             </select>
+           </div>
+           <div className="relative group">
+             <div className="absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none">
+               <ArrowUpDown className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+             </div>
+             <select 
+               className="pl-14 pr-8 py-5 bg-white border border-slate-200 rounded-3xl font-black uppercase text-[10px] tracking-widest text-slate-500 focus:outline-none shadow-sm cursor-pointer hover:border-slate-300 appearance-none"
+               value={sortOption}
+               onChange={(e) => setSortOption(e.target.value as any)}
+             >
+               <option value="A-Z">A-Z</option>
+               <option value="Z-A">Z-A</option>
+               <option value="Easy-Hard">Difficulty: Easy to Hard</option>
+               <option value="Hard-Easy">Difficulty: Hard to Easy</option>
+             </select>
+           </div>
            <button 
              onClick={() => setIsBulkAdding(true)}
              className="px-8 py-5 bg-amber-50 text-amber-700 rounded-3xl font-black uppercase tracking-widest text-[10px] hover:bg-amber-100 transition-all flex items-center gap-3 border border-amber-200"
@@ -243,25 +266,25 @@ export default function WordBank({ words, setWords }: Props) {
       </div>
 
       {/* Word Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {sortedWords.map(word => (
           <div 
             key={word.id} 
-            className={`bento-card p-8 group relative overflow-hidden transition-all border-2 ${
+            className={`bento-card p-6 md:p-8 flex flex-col group relative overflow-hidden transition-all border-2 min-h-[300px] ${
               selectedIds.includes(word.id) ? 'border-indigo-400 shadow-xl shadow-indigo-50 bg-indigo-50/40' : 
-              word.difficulty === Difficulty.EASY ? 'border-green-100 bg-green-50/50 hover:border-green-200' :
-              word.difficulty === Difficulty.MEDIUM ? 'border-amber-100 bg-amber-50/50 hover:border-amber-200' :
+              word.difficulty === Difficulty.A1 || word.difficulty === Difficulty.A2 ? 'border-green-100 bg-green-50/50 hover:border-green-200' :
+              word.difficulty === Difficulty.B1 || word.difficulty === Difficulty.B2 ? 'border-amber-100 bg-amber-50/50 hover:border-amber-200' :
               'border-red-100 bg-red-50/50 hover:border-red-200'
             }`}
           >
             {/* Background Decorative Accents */}
             <div className={`absolute top-0 right-0 w-16 h-16 opacity-5 rounded-bl-[40px] ${
-              word.difficulty === Difficulty.EASY ? 'bg-green-500' :
-              word.difficulty === Difficulty.MEDIUM ? 'bg-amber-500' :
+              word.difficulty === Difficulty.A1 || word.difficulty === Difficulty.A2 ? 'bg-green-500' :
+              word.difficulty === Difficulty.B1 || word.difficulty === Difficulty.B2 ? 'bg-amber-500' :
               'bg-red-500'
             }`} />
 
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-6 shrink-0">
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => toggleSelectWord(word.id)}
@@ -272,8 +295,8 @@ export default function WordBank({ words, setWords }: Props) {
                   {selectedIds.includes(word.id) && <CheckSquare className="w-4 h-4" />}
                 </button>
                 <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm ${
-                  word.difficulty === Difficulty.EASY ? 'bg-green-100 text-green-700' :
-                  word.difficulty === Difficulty.MEDIUM ? 'bg-amber-100 text-amber-700' :
+                  word.difficulty === Difficulty.A1 || word.difficulty === Difficulty.A2 ? 'bg-green-100 text-green-700' :
+                  word.difficulty === Difficulty.B1 || word.difficulty === Difficulty.B2 ? 'bg-amber-100 text-amber-700' :
                   'bg-red-100 text-red-700'
                 }`}>
                   {word.difficulty}
@@ -295,12 +318,31 @@ export default function WordBank({ words, setWords }: Props) {
               </div>
             </div>
             
-            <h4 className="text-3xl font-black text-slate-900 mb-2 tracking-tighter uppercase leading-none">{word.text}</h4>
-            <p className="text-xs text-slate-400 font-bold font-mono tracking-widest mb-6">/ {word.pronunciation} /</p>
+            <div className="flex-1 min-h-0 mb-6">
+              <h4 className="text-2xl xl:text-3xl font-black text-slate-900 mb-2 tracking-tighter uppercase leading-none break-words hyphens-auto">{word.text}</h4>
+              <p className="text-xs text-slate-400 font-bold font-mono tracking-widest break-words">/ {word.pronunciation} /</p>
+            </div>
             
-            <div className="pt-6 border-t border-slate-50 flex flex-col gap-1">
-              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Meaning</span>
-              <p className="text-sm font-bold text-slate-600 uppercase tracking-tight">{word.meaning}</p>
+            <div className="pt-6 border-t border-slate-200/50 flex flex-col gap-1 shrink-0">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meaning</span>
+              <p className="text-sm font-bold text-slate-700 uppercase tracking-tight mb-4 leading-snug break-words">{word.meaning}</p>
+              
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 shrink-0">Example</span>
+              {word.example ? (
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <p className="text-sm font-semibold text-slate-600 italic leading-relaxed break-words">"{word.example}"</p>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => { setEditingWord(word); setEditError(''); }}
+                  className="text-left bg-slate-50 border border-dashed border-slate-300 p-3 rounded-xl hover:bg-slate-100 hover:border-amber-300 transition-colors group/edit w-full"
+                >
+                  <p className="text-xs font-medium text-slate-400 group-hover/edit:text-amber-600 flex items-center justify-between">
+                    <span>No example provided.</span>
+                    <span className="text-amber-500 font-bold uppercase text-[10px] tracking-widest ml-2">Add Example</span>
+                  </p>
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -387,13 +429,16 @@ export default function WordBank({ words, setWords }: Props) {
                         value={newWord.difficulty}
                         onChange={(e) => setNewWord({...newWord, difficulty: e.target.value as any})}
                        >
-                         <option value={Difficulty.EASY}>Easy</option>
-                         <option value={Difficulty.MEDIUM}>Medium</option>
-                         <option value={Difficulty.HARD}>Hard</option>
+                         <option value={Difficulty.A1}>A1</option>
+                         <option value={Difficulty.A2}>A2</option>
+                         <option value={Difficulty.B1}>B1</option>
+                         <option value={Difficulty.B2}>B2</option>
+                         <option value={Difficulty.C1}>C1</option>
+                         <option value={Difficulty.C2}>C2</option>
                        </select>
                        <div className={`w-4 h-4 rounded-full shadow-sm shrink-0 ${
-                         newWord.difficulty === Difficulty.EASY ? 'bg-green-500 shadow-green-200' :
-                         newWord.difficulty === Difficulty.MEDIUM ? 'bg-orange-500 shadow-orange-200' :
+                         newWord.difficulty === Difficulty.A1 || newWord.difficulty === Difficulty.A2 ? 'bg-green-500 shadow-green-200' :
+                         newWord.difficulty === Difficulty.B1 || newWord.difficulty === Difficulty.B2 ? 'bg-orange-500 shadow-orange-200' :
                          'bg-red-500 shadow-red-200'
                        }`} />
                      </div>
@@ -403,9 +448,19 @@ export default function WordBank({ words, setWords }: Props) {
                     <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Meaning (Portuguese)</label>
                     <input 
                       type="text" 
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:outline-none font-bold"
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:outline-none font-bold mb-4"
                       value={newWord.meaning || ''}
                       onChange={(e) => setNewWord({...newWord, meaning: e.target.value})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Example Sentence (English)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. He climbed the highest mountain."
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:outline-none font-bold"
+                      value={newWord.example || ''}
+                      onChange={(e) => setNewWord({...newWord, example: e.target.value})}
                     />
                  </div>
                  {addError && <p className="text-red-500 font-bold text-xs">{addError}</p>}
@@ -507,13 +562,16 @@ export default function WordBank({ words, setWords }: Props) {
                         value={editingWord.difficulty}
                         onChange={(e) => setEditingWord({...editingWord, difficulty: e.target.value as any})}
                        >
-                         <option value={Difficulty.EASY}>Easy</option>
-                         <option value={Difficulty.MEDIUM}>Medium</option>
-                         <option value={Difficulty.HARD}>Hard</option>
+                         <option value={Difficulty.A1}>A1</option>
+                         <option value={Difficulty.A2}>A2</option>
+                         <option value={Difficulty.B1}>B1</option>
+                         <option value={Difficulty.B2}>B2</option>
+                         <option value={Difficulty.C1}>C1</option>
+                         <option value={Difficulty.C2}>C2</option>
                        </select>
                        <div className={`w-4 h-4 rounded-full shadow-sm shrink-0 ${
-                         editingWord.difficulty === Difficulty.EASY ? 'bg-green-500 shadow-green-200' :
-                         editingWord.difficulty === Difficulty.MEDIUM ? 'bg-orange-500 shadow-orange-200' :
+                         editingWord.difficulty === Difficulty.A1 || editingWord.difficulty === Difficulty.A2 ? 'bg-green-500 shadow-green-200' :
+                         editingWord.difficulty === Difficulty.B1 || editingWord.difficulty === Difficulty.B2 ? 'bg-orange-500 shadow-orange-200' :
                          'bg-red-500 shadow-red-200'
                        }`} />
                      </div>
@@ -523,9 +581,18 @@ export default function WordBank({ words, setWords }: Props) {
                     <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Meaning (Portuguese)</label>
                     <input 
                       type="text" 
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:outline-none font-bold"
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:outline-none font-bold mb-4"
                       value={editingWord.meaning}
                       onChange={(e) => setEditingWord({...editingWord, meaning: e.target.value})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Example Sentence (English)</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:outline-none font-bold"
+                      value={editingWord.example || ''}
+                      onChange={(e) => setEditingWord({...editingWord, example: e.target.value})}
                     />
                  </div>
                  {editError && <p className="text-red-500 font-bold text-xs">{editError}</p>}

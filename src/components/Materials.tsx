@@ -110,9 +110,9 @@ export default function Materials({ words }: Props) {
 
   const dynamicPhases = generatePhases(studentCount, groupSize);
 
-  const easyCount = words.filter(w => w.difficulty === Difficulty.EASY).length;
-  const mediumCount = words.filter(w => w.difficulty === Difficulty.MEDIUM).length;
-  const hardCount = words.filter(w => w.difficulty === Difficulty.HARD).length;
+  const easyCount = words.filter(w => w.difficulty === Difficulty.A1).length;
+  const mediumCount = words.filter(w => w.difficulty === Difficulty.B1).length;
+  const hardCount = words.filter(w => w.difficulty === Difficulty.C1).length;
 
   return (
     <div className="space-y-8 pb-20 px-2 lg:px-6">
@@ -312,8 +312,8 @@ export default function Materials({ words }: Props) {
                      <td className="px-8 py-5 font-bold text-slate-600 uppercase tracking-tight border-r border-slate-50">{w.meaning}</td>
                      <td className="px-8 py-5">
                         <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-sm ${
-                          w.difficulty === Difficulty.EASY ? 'bg-green-100 text-green-700' :
-                          w.difficulty === Difficulty.MEDIUM ? 'bg-amber-100 text-amber-700' :
+                          w.difficulty === Difficulty.A1 ? 'bg-green-100 text-green-700' :
+                          w.difficulty === Difficulty.B1 ? 'bg-amber-100 text-amber-700' :
                           'bg-red-100 text-red-700'
                         }`}>
                           {w.difficulty}

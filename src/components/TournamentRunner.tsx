@@ -3,6 +3,7 @@ import { Users, Play, Pause, ChevronRight, CheckCircle2, XCircle, SkipForward, A
 import { Bee } from './icons/Bee';
 import { motion, AnimatePresence } from 'motion/react';
 import { PrintableAssets } from './PrintableAssets';
+import { School, ClassRoom, Student, Word, Competition, CompetitionPhase, Difficulty } from '../types';
 import { 
   buildInitialCompetition, 
   handleStudentElimination, 
@@ -57,13 +58,24 @@ export default function TournamentRunner({
     : null;
 
   const currentWord = useMemo(() => {
-    const difficultyLevel = 
-      activeComp?.currentPhase === CompetitionPhase.PRELIMINARY ? Difficulty.EASY :
-      activeComp?.currentPhase === CompetitionPhase.QUARTERFINAL ? Difficulty.EASY :
-      activeComp?.currentPhase === CompetitionPhase.FINAL ? Difficulty.HARD :
-      Difficulty.MEDIUM;
+    let allowedDifficulties: Difficulty[] = [];
+    if (activeComp?.currentPhase === CompetitionPhase.PRELIMINARY) {
+      allowedDifficulties = [Difficulty.A1, Difficulty.A2];
+    } else if (activeComp?.currentPhase === CompetitionPhase.QUARTERFINAL) {
+      allowedDifficulties = [Difficulty.B1, Difficulty.B2];
+    } else if (activeComp?.currentPhase === CompetitionPhase.SEMIFINAL) {
+      allowedDifficulties = [Difficulty.B2, Difficulty.C1];
+    } else if (activeComp?.currentPhase === CompetitionPhase.FINAL) {
+      allowedDifficulties = [Difficulty.C1, Difficulty.C2];
+    } else {
+      allowedDifficulties = [Difficulty.A1, Difficulty.B1, Difficulty.C1]; // Fallback
+    }
     
-    const pool = words.filter(w => w.difficulty === difficultyLevel);
+    // Fallback if no words match exactly
+    let pool = words.filter(w => allowedDifficulties.includes(w.difficulty));
+    if (pool.length === 0) {
+      pool = words; // Ultimate fallback: just pick any word available
+    }
     if (pool.length === 0) return null;
     
     // Use wordSeed to change the word
@@ -536,16 +548,28 @@ export default function TournamentRunner({
                 </div>
 
                 {/* Random word display */}
-                <div className="py-8 bg-slate-800/50 rounded-3xl border-2 border-slate-700 relative z-10 flex flex-col sm:flex-row items-center justify-between px-8 gap-4">
-                  <div className="text-left flex-1">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Suggestion Word</p>
+                <div className="py-8 bg-slate-800/50 rounded-3xl border-2 border-slate-700 relative z-10 flex flex-col sm:flex-row items-center justify-between px-6 sm:px-8 gap-6 w-full">
+                  <div className="text-left flex-1 min-w-0 w-full overflow-hidden">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 shrink-0">Suggestion Word</p>
                     {currentWord ? (
-                      <div>
-                        <h4 className="text-3xl font-black uppercase text-amber-400 tracking-tighter">{currentWord.text}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-xs font-mono text-slate-400">/{currentWord.pronunciation}/</p>
-                          <span className="w-1 h-1 bg-slate-600 rounded-full" />
-                          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate max-w-[200px]">{currentWord.meaning}</p>
+                      <div className="w-full">
+                        <h4 className="text-3xl sm:text-4xl md:text-5xl font-black uppercase text-amber-400 tracking-tighter break-words hyphens-auto leading-none mb-3">
+                          {currentWord.text}
+                        </h4>
+                        <div className="flex flex-col gap-2 mt-2 break-words">
+                          <p className="text-sm font-mono text-slate-400 font-bold tracking-widest bg-slate-900/50 block w-fit px-3 py-1 rounded-lg">/ {currentWord.pronunciation} /</p>
+                          <p className="text-[12px] font-black text-slate-300 uppercase tracking-widest mt-1 break-words">{currentWord.meaning}</p>
+                          {currentWord.example ? (
+                            <div className="mt-2 bg-slate-900/40 p-4 rounded-xl border border-slate-700/50">
+                              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Example</span>
+                              <p className="text-sm font-medium text-slate-300 italic whitespace-normal break-words leading-relaxed">"{currentWord.example}"</p>
+                            </div>
+                          ) : (
+                            <div className="mt-2 bg-slate-900/20 p-4 rounded-xl border border-transparent">
+                              <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-1">Example</span>
+                              <p className="text-sm font-medium text-slate-500 italic whitespace-normal break-words leading-relaxed">No example provided for this word.</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (

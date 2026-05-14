@@ -1,26 +1,21 @@
 import React, { useState } from 'react';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { Bee } from './icons/Bee';
 
 export default function Login() {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleLogin = async () => {
     setErrorDetails(null);
     setIsLoading(true);
 
     try {
-      if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
+      const provider = new GoogleAuthProvider();
+      // Configure for iframe environments by prompting each time
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error(error);
       setErrorDetails(error.message || String(error));
@@ -44,40 +39,12 @@ export default function Login() {
           </div>
         )}
 
-        <form onSubmit={handleEmailLogin} className="space-y-4">
-          <input 
-            type="email" 
-            placeholder="E-mail" 
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all placeholder:text-slate-400"
-          />
-          <input 
-            type="password" 
-            placeholder="Senha" 
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all placeholder:text-slate-400"
-          />
-          <button 
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-50 mt-4"
-          >
-            {isLoading ? 'Aguarde...' : (isRegistering ? 'Criar Conta' : 'Entrar')}
-          </button>
-        </form>
-
         <button 
-          onClick={() => {
-            setIsRegistering(!isRegistering);
-            setErrorDetails(null);
-          }}
-          className="mt-6 text-slate-400 font-medium text-sm hover:text-slate-600 transition-colors"
+          onClick={handleGoogleLogin}
+          disabled={isLoading}
+          className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-50 mt-4 flex items-center justify-center gap-3"
         >
-          {isRegistering ? 'Já tem uma conta? Faça login' : 'Não tem conta? Cadastre-se'}
+          {isLoading ? 'Aguarde...' : 'Entrar com o Google'}
         </button>
       </div>
     </div>

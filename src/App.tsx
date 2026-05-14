@@ -20,7 +20,8 @@ import {
   Student, 
   Word, 
   Competition, 
-  Difficulty 
+  Difficulty,
+  CompetitionPhase
 } from './types';
 import { DEFAULT_WORDS } from './data/wordBank';
 
@@ -67,7 +68,7 @@ export default function App() {
     totalClasses: classes.length,
     totalStudents: students.length,
     totalWords: words.length,
-    activeCompetitions: competitions.filter(c => c.currentPhase !== 'Completed').length
+    activeCompetitions: competitions.filter(c => c.currentPhase !== CompetitionPhase.COMPLETED).length
   }), [schools, classes, students, words, competitions]);
 
   const navItems = [
@@ -115,7 +116,7 @@ export default function App() {
           </div>
         </div>
 
-        <nav className="flex-1 p-2 sm:p-3 lg:p-6 space-y-2">
+        <nav className="flex-1 p-2 sm:p-3 lg:p-6 space-y-2 overflow-y-auto min-h-0">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -133,8 +134,8 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="p-3 lg:p-6 hidden lg:block">
-          <div className="bg-amber-400 text-amber-900 p-6 rounded-3xl shadow-lg border-b-4 border-amber-600 mb-4">
+        <div className="p-2 sm:p-3 lg:p-6 mt-auto shrink-0 border-t border-slate-100">
+          <div className="bg-amber-400 text-amber-900 p-6 rounded-3xl shadow-lg border-b-4 border-amber-600 mb-4 hidden lg:block">
             <p className="text-[10px] text-amber-800 font-black uppercase mb-1 tracking-widest">Active Status</p>
             <p className="text-sm font-black truncate uppercase">
               {activeCompetition ? activeCompetition.currentPhase : 'Waiting Start'}
@@ -143,10 +144,11 @@ export default function App() {
           
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-3 p-3 bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all font-bold text-xs uppercase tracking-widest"
+            className="w-full flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 lg:gap-3 p-3 bg-red-50 lg:bg-slate-100 text-red-600 lg:text-slate-500 hover:bg-red-100 lg:hover:bg-red-50 hover:text-red-700 lg:hover:text-red-600 rounded-xl transition-all font-bold text-[10px] lg:text-xs uppercase tracking-widest"
+            title="Sair"
           >
-            <LogOut className="w-4 h-4 shrink-0" />
-            <span className="hidden lg:block truncate">Sign Out</span>
+            <LogOut className="w-5 h-5 shrink-0" />
+            <span className="block truncate lg:ml-0">Sair</span>
           </button>
         </div>
       </aside>
@@ -219,9 +221,9 @@ export default function App() {
                   <h3 className="text-lg font-black uppercase tracking-tighter mb-8 text-amber-400">Phase Difficulty</h3>
                   <div className="space-y-8 flex-1">
                      {[
-                       { label: 'Easy Phase', count: words.filter(w => w.difficulty === Difficulty.EASY).length, color: 'bg-green-400', textColor: 'text-green-400', shadowColor: 'shadow-[0_0_12px_rgba(74,222,128,0.3)]', total: 40 },
-                       { label: 'Medium Phase', count: words.filter(w => w.difficulty === Difficulty.MEDIUM).length, color: 'bg-orange-500', textColor: 'text-orange-500', shadowColor: 'shadow-[0_0_12px_rgba(249,115,22,0.3)]', total: 35 },
-                       { label: 'Hard Phase', count: words.filter(w => w.difficulty === Difficulty.HARD).length, color: 'bg-red-500', textColor: 'text-red-500', shadowColor: 'shadow-[0_0_12px_rgba(239,68,68,0.3)]', total: 25 },
+                       { label: 'Easy Phase', count: words.filter(w => w.difficulty === Difficulty.A1).length, color: 'bg-green-400', textColor: 'text-green-400', shadowColor: 'shadow-[0_0_12px_rgba(74,222,128,0.3)]', total: 40 },
+                       { label: 'Medium Phase', count: words.filter(w => w.difficulty === Difficulty.B1).length, color: 'bg-orange-500', textColor: 'text-orange-500', shadowColor: 'shadow-[0_0_12px_rgba(249,115,22,0.3)]', total: 35 },
+                       { label: 'Hard Phase', count: words.filter(w => w.difficulty === Difficulty.C1).length, color: 'bg-red-500', textColor: 'text-red-500', shadowColor: 'shadow-[0_0_12px_rgba(239,68,68,0.3)]', total: 25 },
                      ].map(diff => (
                        <div key={diff.label}>
                           <div className="flex justify-between text-[10px] font-black mb-3 tracking-widest uppercase">
@@ -267,7 +269,7 @@ export default function App() {
                         {competitions.slice(0, 4).map(c => (
                           <div key={c.id} className="flex items-center justify-between p-5 bg-slate-50 border border-slate-100 rounded-2xl group transition-all cursor-pointer hover:bg-white hover:border-amber-200">
                             <div className="flex items-center gap-5">
-                              <div className={`w-3 h-3 rounded-full ${c.currentPhase === 'Completed' ? 'bg-green-500' : 'bg-amber-500'} shadow-sm shadow-amber-200`} />
+                              <div className={`w-3 h-3 rounded-full ${c.currentPhase === CompetitionPhase.COMPLETED ? 'bg-green-500' : 'bg-amber-500'} shadow-sm shadow-amber-200`} />
                               <div>
                                 <p className="font-black text-slate-900 group-hover:text-amber-600 transition-colors uppercase tracking-tight">{
                                   c.classIds.map(id => classes.find(cl => cl.id === id)?.name).filter(Boolean).join(', ') || 'Unknown Class'
